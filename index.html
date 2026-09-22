@@ -812,7 +812,7 @@
   let lastAddAt = 0;
   moreBtn.addEventListener('click', function(){
     const now = Date.now();
-    if (now - lastAddAt < 1500) return;
+    if (now - lastAddAt < 1000) return;
     lastAddAt = now;
 
     addBouquets(Math.floor(rand(8, 14)));
