@@ -219,10 +219,6 @@
     pointer-events:auto;
     transform:translate(-50%,-50%) scale(1);
   }
-  .more-btn.show.cooldown{
-    opacity:0.45;
-    pointer-events:none;
-  }
   .more-btn:active{
     transform:translate(-50%,-50%) scale(0.92);
   }
@@ -810,23 +806,19 @@
     moreBtn.classList.add('show');
   }
 
-  // enfriamiento: evita que tocar el botón muy seguido apile demasiados
-  // elementos de golpe y trabe el navegador (sobre todo en celulares)
-  let moreBtnCooldown = false;
+  // el botón siempre se ve y reacciona normal al tocarlo; por dentro, si tocan
+  // muy seguido (antes de 1.5s desde el último agregado real) el clic no hace nada,
+  // sin que se note ningún "apagado" visual
+  let lastAddAt = 0;
   moreBtn.addEventListener('click', function(){
-    if (moreBtnCooldown) return;
-    moreBtnCooldown = true;
-    moreBtn.classList.add('cooldown');
+    const now = Date.now();
+    if (now - lastAddAt < 1500) return;
+    lastAddAt = now;
 
     addBouquets(Math.floor(rand(8, 14)));
     addEdgeBouquets(Math.floor(rand(2, 5)));
     petalBurst(Math.floor(rand(18, 30)));
     moveMoreButtonRandom();
-
-    setTimeout(function(){
-      moreBtnCooldown = false;
-      moreBtn.classList.remove('cooldown');
-    }, 1600);
   });
 
 })();
