@@ -219,6 +219,10 @@
     pointer-events:auto;
     transform:translate(-50%,-50%) scale(1);
   }
+  .more-btn.show.cooldown{
+    opacity:0.45;
+    pointer-events:none;
+  }
   .more-btn:active{
     transform:translate(-50%,-50%) scale(0.92);
   }
@@ -276,31 +280,51 @@
   function rand(min, max){ return min + Math.random() * (max - min); }
   function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-  /* ---------------- "No" button dodge ---------------- */
+  /* ---------------- "No" button dodge (por toda la pantalla, nunca sobre "Sí") ---------------- */
   function makeUnselectable(btn){
-    let scale = 1;
+    let grows = 0;
+    const MAX_GROWS = 3;
+    const GROW_STEP = 0.15;
+
     function dodge(){
       const row = btn.parentElement;
-      const rowRect = row.getBoundingClientRect();
+      const yesBtn = row.querySelector('.btn-yes');
       const btnW = btn.offsetWidth;
       const btnH = btn.offsetHeight;
+      const margin = 16;
 
-      const maxX = Math.max(rowRect.width - btnW, 0);
-      const maxY = Math.max(rowRect.height - btnH, 0);
+      const maxLeft = Math.max(window.innerWidth - btnW - margin, margin);
+      const maxTop = Math.max(window.innerHeight - btnH - margin, margin);
+      const yesRect = yesBtn ? yesBtn.getBoundingClientRect() : null;
+      const colMargin = 14; // aire extra alrededor de la columna de "Sí"
 
-      const newX = Math.random() * maxX - (rowRect.width - btnW)/2;
-      const newY = Math.random() * maxY - (rowRect.height - btnH)/2;
+      let left, top;
+      for (let tries = 0; tries < 25; tries++){
+        left = margin + Math.random() * (maxLeft - margin);
+        top = margin + Math.random() * (maxTop - margin);
+        if (!yesRect) break;
+        // evita quedar arriba o abajo de "Sí": esquiva toda su columna horizontal, no solo su caja
+        const overlapsColumn = (left + btnW > yesRect.left - colMargin) && (left < yesRect.right + colMargin);
+        if (!overlapsColumn) break;
+      }
 
-      btn.style.position = 'absolute';
-      btn.style.left = '50%';
-      btn.style.top = '50%';
-      btn.style.transform = `translate(calc(-50% + ${newX}px), calc(-50% + ${newY}px))`;
+      // lo saca de la tarjeta (que tiene backdrop-filter y "atraparía" el position:fixed
+      // haciendo que se mueva relativo a ella en vez de a toda la pantalla)
+      if (btn.parentElement !== document.body){
+        document.body.appendChild(btn);
+      }
 
-      // el botón de "Sí" crece un poco cada intento, como recompensa
-      const yesBtn = row.querySelector('.btn-yes');
-      if (yesBtn && scale < 1.35){
-        scale += 0.05;
-        yesBtn.style.transform = `scale(${scale})`;
+      btn.style.position = 'fixed';
+      btn.style.zIndex = '30';
+      btn.style.left = left + 'px';
+      btn.style.top = top + 'px';
+      btn.style.margin = '0';
+      btn.style.transform = 'none';
+
+      // el botón de "Sí" crece con cada intento, pero solo las primeras 3 veces, después se planta
+      if (yesBtn && grows < MAX_GROWS){
+        grows++;
+        yesBtn.style.transform = `scale(${(1 + grows * GROW_STEP).toFixed(2)})`;
       }
     }
 
@@ -321,11 +345,15 @@
   document.getElementById('yes1').addEventListener('click', function(){
     step1.classList.remove('active');
     step2.classList.add('active');
+    // por si "No" ya escapó de la tarjeta esquivando, lo ocultamos al cambiar de pregunta
+    document.getElementById('no1').style.display = 'none';
   });
 
   document.getElementById('yes2').addEventListener('click', function(){
     card.classList.add('hide');
     app.classList.add('bloom');
+    // oculta cualquier "No" que haya quedado escapado por fuera de la tarjeta
+    document.querySelectorAll('.btn-no').forEach(function(b){ b.style.display = 'none'; });
     setTimeout(function(){
       finalMessage.classList.add('show');
     }, 300);
@@ -596,7 +624,7 @@
   }
 
   // hace que un ramo/flor se desvanezca y se quite del DOM tras "ms" milisegundos
-  const AUTO_REMOVE_MS = 10000;
+  const AUTO_REMOVE_MS = 4000;
   function scheduleRemoval(div, ms){
     setTimeout(() => {
       div.classList.remove('show');
@@ -782,11 +810,23 @@
     moreBtn.classList.add('show');
   }
 
+  // enfriamiento: evita que tocar el botón muy seguido apile demasiados
+  // elementos de golpe y trabe el navegador (sobre todo en celulares)
+  let moreBtnCooldown = false;
   moreBtn.addEventListener('click', function(){
-    addBouquets(Math.floor(rand(10, 18)));
-    addEdgeBouquets(Math.floor(rand(3, 7)));
-    petalBurst(Math.floor(rand(25, 45)));
+    if (moreBtnCooldown) return;
+    moreBtnCooldown = true;
+    moreBtn.classList.add('cooldown');
+
+    addBouquets(Math.floor(rand(8, 14)));
+    addEdgeBouquets(Math.floor(rand(2, 5)));
+    petalBurst(Math.floor(rand(18, 30)));
     moveMoreButtonRandom();
+
+    setTimeout(function(){
+      moreBtnCooldown = false;
+      moreBtn.classList.remove('cooldown');
+    }, 1600);
   });
 
 })();
