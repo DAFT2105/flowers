@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Para ti 💛</title>
+<style>
+  :root{
+    --bg-dark-1:#0b0c10;
+    --bg-dark-2:#15131a;
+    --yellow:#ffd23f;
+    --yellow-soft:#ffe066;
+    --yellow-deep:#e8b400;
+    --text:#f5f1e8;
+    --card-bg:rgba(255,255,255,0.06);
+    --card-border:rgba(255,210,63,0.35);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    width:100%;
+    overflow:hidden;
+    background:var(--bg-dark-1);
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  #app{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
+    background: radial-gradient(ellipse at 50% 20%, var(--bg-dark-2) 0%, var(--bg-dark-1) 70%);
+    transition: background 2.5s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  #app.bloom{
+    background: radial-gradient(ellipse at 50% 30%, #3a2f14 0%, #241d10 45%, #14110c 100%);
+  }
+
+  /* ---------- Card / question steps ---------- */
+  .card{
+    position:relative;
+    z-index:25;
+    width:min(90vw, 420px);
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:24px;
+    padding:32px 24px 40px;
+    text-align:center;
+    backdrop-filter:blur(10px);
+    box-shadow:0 10px 40px rgba(0,0,0,0.5), 0 0 60px rgba(255,210,63,0.08);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+
+  .card.hide{
+    opacity:0;
+    transform:scale(.92);
+    pointer-events:none;
+  }
+
+  .step{
+    display:none;
+    animation: fadeIn .5s ease;
+  }
+  .step.active{ display:block; }
+
+  @keyframes fadeIn{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  .step h1{
+    color:var(--text);
+    font-size:clamp(1.3rem, 5vw, 1.8rem);
+    margin:0 0 28px;
+    line-height:1.3;
+  }
+
+  .btn-row{
+    position:relative;
+    display:flex;
+    gap:18px;
+    justify-content:center;
+    align-items:center;
+    height:74px;
+  }
+
+  .btn{
+    border:none;
+    border-radius:999px;
+    padding:14px 30px;
+    font-size:1.05rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:transform .15s ease, box-shadow .2s ease, background .3s ease;
+    touch-action:manipulation;
+  }
+
+  .btn-yes{
+    background:linear-gradient(135deg, var(--yellow-soft), var(--yellow-deep));
+    color:#2a1f00;
+    box-shadow:0 4px 18px rgba(255,210,63,0.45);
+  }
+  .btn-yes:active{ transform:scale(.95); }
+
+  .btn-no{
+    background:rgba(255,255,255,0.1);
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.2);
+    position:relative;
+    left:0; top:0;
+  }
+
+  /* ---------- Final message ---------- */
+  .final-message{
+    position:absolute;
+    z-index:20;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 1.2s ease 0.4s;
+    width:90vw;
+  }
+  .final-message.show{ opacity:1; }
+
+  .final-message h1{
+    color:var(--yellow-soft);
+    font-size:clamp(1.6rem, 6vw, 2.6rem);
+    text-shadow:0 0 30px rgba(255,210,63,0.5);
+    margin:0 0 10px;
+  }
+  .final-message p{
+    color:var(--text);
+    font-size:clamp(1rem, 3.5vw, 1.2rem);
+    opacity:.85;
+    margin:0;
+  }
+
+  /* ---------- Petals ---------- */
+  #petals-layer{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:15;
+  }
+
+  .petal{
+    position:absolute;
+    top:-6vh;
+    opacity:0.95;
+    will-change:transform, opacity;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,0.25));
+  }
+  .petal svg{ display:block; }
+
+  /* ---------- Bouquets ---------- */
+  #bouquets-layer{
+    position:absolute;
+    inset:0;
+    z-index:10;
+    pointer-events:none;
+  }
+
+  .bouquet{
+    position:absolute;
+    opacity:0;
+    filter:blur(var(--blur, 0px)) brightness(var(--bright,1));
+    transform:translate(-50%,-50%) scale(0) rotate(var(--rot,0deg));
+    transition:opacity .9s ease, transform 1s cubic-bezier(.34,1.56,.64,1);
+  }
+  .bouquet.show{
+    opacity:var(--op, 1);
+    transform:translate(-50%,-50%) scale(1) rotate(var(--rot,0deg));
+  }
+
+  /* ---------- Explosión de partículas (canvas) ---------- */
+  #fireworkCanvas{
+    position:absolute;
+    inset:0;
+    z-index:18;
+    pointer-events:none;
+  }
+
+  /* ---------- Botón "Más flores" (aparece tras la revelación) ---------- */
+  .more-btn{
+    position:absolute;
+    z-index:22;
+    transform:translate(-50%,-50%) scale(0);
+    border:none;
+    border-radius:999px;
+    padding:13px 24px;
+    font-size:0.95rem;
+    font-weight:600;
+    white-space:nowrap;
+    color:#2a1f00;
+    background:linear-gradient(135deg, var(--yellow-soft), var(--yellow-deep));
+    box-shadow:0 4px 20px rgba(255,210,63,0.5), 0 0 0 rgba(255,210,63,0.6);
+    cursor:pointer;
+    opacity:0;
+    pointer-events:none;
+    touch-action:manipulation;
+    transition:left .7s cubic-bezier(.34,1.56,.64,1), top .7s cubic-bezier(.34,1.56,.64,1),
+               opacity .5s ease, transform .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .more-btn.show{
+    opacity:1;
+    pointer-events:auto;
+    transform:translate(-50%,-50%) scale(1);
+  }
+  .more-btn:active{
+    transform:translate(-50%,-50%) scale(0.92);
+  }
+
+  @media (max-width:480px){
+    .btn{ padding:12px 22px; font-size:0.95rem; }
+    .card{ padding:26px 18px 34px; }
+    .more-btn{ padding:11px 18px; font-size:0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="petals-layer"></div>
+  <div id="bouquets-layer"></div>
+  <canvas id="fireworkCanvas"></canvas>
+
+  <div class="card" id="card">
+    <div class="step active" id="step1">
+      <h1>Pero&hellip; ¿me quieres? 💛</h1>
+      <div class="btn-row">
+        <button class="btn btn-yes" id="yes1">Sí</button>
+        <button class="btn btn-no" id="no1">No</button>
+      </div>
+    </div>
+
+    <div class="step" id="step2">
+      <h1>¿De verdad? 🥺</h1>
+      <div class="btn-row">
+        <button class="btn btn-yes" id="yes2">Sí</button>
+        <button class="btn btn-no" id="no2">No</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="final-message" id="finalMessage">
+    <h1>Feliz Día de las Flores Amarillas 💛</h1>
+  </div>
+
+  <button class="more-btn" id="moreFlowersBtn" type="button">🌼 Más flores</button>
+
+</div>
+
+<script>
+(function(){
+
+  /* ============================================================
+     Puedes personalizar el mensaje final editando estas líneas:
+  ============================================================ */
+  const MENSAJE_TITULO = "Feliz Día de las Flores Amarillas 💛";
+  document.querySelector('#finalMessage h1').textContent = MENSAJE_TITULO;
+
+  function rand(min, max){ return min + Math.random() * (max - min); }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* ---------------- "No" button dodge ---------------- */
+  function makeUnselectable(btn){
+    let scale = 1;
+    function dodge(){
+      const row = btn.parentElement;
+      const rowRect = row.getBoundingClientRect();
+      const btnW = btn.offsetWidth;
+      const btnH = btn.offsetHeight;
+
+      const maxX = Math.max(rowRect.width - btnW, 0);
+      const maxY = Math.max(rowRect.height - btnH, 0);
+
+      const newX = Math.random() * maxX - (rowRect.width - btnW)/2;
+      const newY = Math.random() * maxY - (rowRect.height - btnH)/2;
+
+      btn.style.position = 'absolute';
+      btn.style.left = '50%';
+      btn.style.top = '50%';
+      btn.style.transform = `translate(calc(-50% + ${newX}px), calc(-50% + ${newY}px))`;
+
+      // el botón de "Sí" crece un poco cada intento, como recompensa
+      const yesBtn = row.querySelector('.btn-yes');
+      if (yesBtn && scale < 1.35){
+        scale += 0.05;
+        yesBtn.style.transform = `scale(${scale})`;
+      }
+    }
+
+    btn.addEventListener('pointerenter', dodge);
+    btn.addEventListener('touchstart', function(e){ e.preventDefault(); dodge(); }, {passive:false});
+    btn.addEventListener('click', function(e){ e.preventDefault(); dodge(); });
+  }
+
+  document.querySelectorAll('.btn-no').forEach(makeUnselectable);
+
+  /* ---------------- Flow: step1 -> step2 -> final ---------------- */
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const card  = document.getElementById('card');
+  const app   = document.getElementById('app');
+  const finalMessage = document.getElementById('finalMessage');
+
+  document.getElementById('yes1').addEventListener('click', function(){
+    step1.classList.remove('active');
+    step2.classList.add('active');
+  });
+
+  document.getElementById('yes2').addEventListener('click', function(){
+    card.classList.add('hide');
+    app.classList.add('bloom');
+    setTimeout(function(){
+      finalMessage.classList.add('show');
+    }, 300);
+    startFireworksShow();
+    spawnBouquets();
+    startPetalRain();
+    setTimeout(showMoreFlowersButton, 1600);
+  });
+
+  // tonos de amarillo/naranja y verde con variación, para que ninguna flor sea idéntica
+  const PETAL_SHADES = ['#ffd23f', '#ffdb5c', '#f9c221', '#eab308', '#ffe066'];
+  const CENTER_SHADES = ['#e8b400', '#c98a00', '#a86c00'];
+  const LEAF_SHADES   = ['#3f7d3a', '#4c8f3f', '#356b34', '#5a9a44'];
+
+  /* ---------------- Explosión de partículas en forma de flor (canvas) ---------------- */
+  const canvas = document.getElementById('fireworkCanvas');
+  const ctx = canvas.getContext('2d');
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resizeCanvas(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(window.innerWidth * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  let particles = [];
+  let fireworkRAF = null;
+  let lastTs = 0;
+
+  function spawnFirework(cx, cy, scale){
+    scale = scale || 1;
+    if (cx === undefined) cx = window.innerWidth / 2;
+    if (cy === undefined) cy = window.innerHeight * 0.4;
+
+    // núcleo brillante (flash inicial)
+    const coreCount = Math.round(30 * scale);
+    for (let i = 0; i < coreCount; i++){
+      const a = rand(0, Math.PI * 2);
+      const speed = rand(20, 90) * scale;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+        size: rand(2, 4) * scale,
+        color: '#fff6d8',
+        life: rand(0.3, 0.6), maxLife: 0.6,
+        gravity: 10, drag: 0.96
+      });
+    }
+
+    // pétalos de partículas: direcciones desiguales (no repartidas parejo), cada una con su propio largo y ancho
+    const nPetals = Math.floor(rand(7, 12));
+    for (let p = 0; p < nPetals; p++){
+      const baseAngle = (Math.PI * 2 / nPetals) * p + rand(-0.18, 0.18) - Math.PI/2;
+      const petalSpread = rand(0.12, 0.26);
+      const petalSpeed = rand(160, 320) * scale;
+      const petalCount = Math.round(rand(18, 32) * scale);
+      const color = pick(PETAL_SHADES);
+
+      for (let i = 0; i < petalCount; i++){
+        const t = i / petalCount;
+        const a = baseAngle + rand(-petalSpread, petalSpread) * (1 - t * 0.4);
+        const speed = petalSpeed * rand(0.55, 1.05) * (0.5 + t * 0.7);
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(a) * speed,
+          vy: Math.sin(a) * speed,
+          size: rand(1.8, 4.2) * scale,
+          color: Math.random() < 0.75 ? color : pick(PETAL_SHADES),
+          life: rand(1.1, 1.9),
+          maxLife: 1.9,
+          gravity: rand(60, 140),
+          drag: rand(0.965, 0.985)
+        });
+      }
+    }
+
+    // algunas chispitas doradas sueltas, más lentas, para dar volumen
+    const sparkCount = Math.round(40 * scale);
+    for (let i = 0; i < sparkCount; i++){
+      const a = rand(0, Math.PI * 2);
+      const speed = rand(30, 140) * scale;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+        size: rand(1, 2.6) * scale,
+        color: pick(CENTER_SHADES),
+        life: rand(1.4, 2.4), maxLife: 2.4,
+        gravity: rand(70, 110), drag: 0.97
+      });
+    }
+
+    if (!fireworkRAF){
+      lastTs = performance.now();
+      fireworkRAF = requestAnimationFrame(animateFirework);
+    }
+  }
+
+  // varias explosiones sueltas en posiciones y momentos al azar, no una sola en el centro
+  function startFireworksShow(){
+    const bursts = Math.floor(rand(6, 9));
+    let t = 0;
+    for (let i = 0; i < bursts; i++){
+      setTimeout(() => {
+        const cx = rand(window.innerWidth * 0.12, window.innerWidth * 0.88);
+        const cy = rand(window.innerHeight * 0.12, window.innerHeight * 0.55);
+        const scale = rand(0.5, 1.1);
+        spawnFirework(cx, cy, scale);
+      }, t);
+      t += rand(180, 420);
+    }
+  }
+
+  function animateFirework(ts){
+    const dt = Math.min((ts - lastTs) / 1000, 0.05);
+    lastTs = ts;
+
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (let i = particles.length - 1; i >= 0; i--){
+      const pt = particles[i];
+      pt.life -= dt;
+      if (pt.life <= 0){ particles.splice(i, 1); continue; }
+
+      pt.vx *= pt.drag;
+      pt.vy = pt.vy * pt.drag + pt.gravity * dt;
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+
+      const alpha = Math.max(pt.life / pt.maxLife, 0);
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.fillStyle = pt.color;
+      ctx.arc(pt.x, pt.y, pt.size * (0.6 + alpha * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+
+    if (particles.length > 0){
+      fireworkRAF = requestAnimationFrame(animateFirework);
+    } else {
+      fireworkRAF = null;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+  }
+
+  /* ---------------- Bouquets (SVG flores orgánicas, no simétricas) ---------------- */
+  // dibuja UN pétalo asimétrico como path (curva desigual entre lado izq. y der.)
+  function petalPath(len, width){
+    const wL = width * rand(0.7, 1.15);
+    const wR = width * rand(0.7, 1.15);
+    const tipShift = rand(-width*0.3, width*0.3);
+    const bulge = rand(0.85, 1.25);
+    return `M0,0
+      C ${-wL},${-len*0.28*bulge} ${-wL*0.7+tipShift},${-len*0.75} ${tipShift*0.4},${-len}
+      C ${wR*0.7+tipShift},${-len*0.75} ${wR},${-len*0.28*bulge} 0,0 Z`;
+  }
+
+  // una flor: pétalos desiguales en ángulo/tamaño + centro de "motitas" irregular
+  function flowerMarkup(cx, cy, scale, rotDeg){
+    const petalColor = pick(PETAL_SHADES);
+    const petalColor2 = pick(PETAL_SHADES);
+    const centerColor = pick(CENTER_SHADES);
+    const nPetals = Math.floor(rand(5, 9));
+    const baseLen = rand(16, 24) * scale;
+    const baseWidth = rand(6, 10) * scale;
+
+    let petals = '';
+    for (let i = 0; i < nPetals; i++){
+      const angle = (360 / nPetals) * i + rand(-14, 14); // separación irregular
+      const len = baseLen * rand(0.8, 1.15);
+      const width = baseWidth * rand(0.8, 1.2);
+      const color = Math.random() < 0.65 ? petalColor : petalColor2;
+      const opacity = rand(0.88, 1);
+      petals += `<path d="${petalPath(len, width)}" fill="${color}" opacity="${opacity.toFixed(2)}"
+        transform="rotate(${angle.toFixed(1)}) translate(0,-1)"/>`;
+    }
+
+    // centro: manchitas irregulares en vez de un círculo perfecto
+    let dots = '';
+    const nDots = Math.floor(rand(10, 16));
+    const centerR = baseWidth * 0.9;
+    for (let i = 0; i < nDots; i++){
+      const a = rand(0, 360) * Math.PI/180;
+      const r = rand(0, centerR * 0.8);
+      const dx = Math.cos(a) * r, dy = Math.sin(a) * r;
+      const dr = rand(0.8, 2.2) * scale;
+      dots += `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="${dr.toFixed(1)}" fill="${pick(CENTER_SHADES)}"/>`;
+    }
+    dots = `<circle r="${(centerR*0.9).toFixed(1)}" fill="${centerColor}" opacity="0.95"/>` + dots;
+
+    return `<g transform="translate(${cx},${cy}) rotate(${rotDeg})">${petals}${dots}</g>`;
+  }
+
+  // tallo curvo (bezier con curvatura aleatoria) + un par de hojas asimétricas
+  function stemMarkup(x1, y1, x2, y2){
+    const midX = (x1 + x2)/2 + rand(-14, 14);
+    const midY = (y1 + y2)/2;
+    const w = rand(2.5, 4);
+    const color = pick(LEAF_SHADES);
+    let leaves = '';
+    const nLeaves = Math.floor(rand(1, 3));
+    for (let i=0; i<nLeaves; i++){
+      const t = rand(0.35, 0.75);
+      const lx = x1 + (x2-x1)*t;
+      const ly = y1 + (y2-y1)*t;
+      const side = Math.random() < 0.5 ? 1 : -1;
+      const lw = rand(10, 18);
+      const lh = rand(5, 9);
+      const rot = side * rand(25, 55);
+      leaves += `<path d="M0,0 C ${side*lw*0.3},${-lh} ${side*lw},${-lh*0.6} ${side*lw*1.3},0
+        C ${side*lw},${lh*0.6} ${side*lw*0.3},${lh} 0,0 Z"
+        fill="${pick(LEAF_SHADES)}" opacity="0.92"
+        transform="translate(${lx.toFixed(1)},${ly.toFixed(1)}) rotate(${rot.toFixed(1)})"/>`;
+    }
+    return `<path d="M${x1},${y1} Q${midX},${midY} ${x2},${y2}" stroke="${color}" stroke-width="${w}" fill="none" stroke-linecap="round"/>${leaves}`;
+  }
+
+  // un "ramo" completo: varios tallos/flores de distinto alto agrupados + envoltorio
+  function bouquetSVG(width, height){
+    const stemBaseY = height - 6;
+    const nStems = Math.floor(rand(3, 6));
+    let stems = '', flowers = '';
+    const spread = width * 0.5;
+    const centerX = width / 2;
+
+    for (let i = 0; i < nStems; i++){
+      const topX = centerX + rand(-spread, spread);
+      const topY = rand(height*0.12, height*0.45);
+      const baseX = centerX + rand(-width*0.15, width*0.15);
+      stems += stemMarkup(baseX, stemBaseY, topX, topY);
+      const fScale = rand(0.75, 1.15);
+      flowers += flowerMarkup(topX, topY, fScale, rand(-15, 15));
+    }
+
+    // envoltorio de papel: forma triangular irregular en la base
+    const wrapColor = pick(['#caa15a', '#d8b877', '#b98f4c']);
+    const wrapWidth = width * rand(0.32, 0.42);
+    const wrapTilt = rand(-6, 6);
+    const wrap = `<path d="M${centerX - wrapWidth},${stemBaseY + 4}
+        L${centerX + wrapWidth * rand(0.85,1.1)},${stemBaseY + 2}
+        L${centerX + wrapWidth*0.15},${height}
+        L${centerX - wrapWidth*0.35},${height} Z"
+        fill="${wrapColor}" opacity="0.95" transform="rotate(${wrapTilt} ${centerX} ${stemBaseY})"/>
+      <path d="M${centerX - wrapWidth*0.6},${stemBaseY + 10} L${centerX + wrapWidth*0.5},${stemBaseY + 6}"
+        stroke="#8a6a30" stroke-width="2" opacity="0.6"/>`;
+
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      ${wrap}
+      ${stems}
+      ${flowers}
+    </svg>`;
+  }
+
+  // una flor sola, sin tallo ni envoltorio (para el botón "Más flores", solo en el medio)
+  function singleFlowerSVG(diameter){
+    const box = diameter * 2;
+    const scale = diameter / 70;
+    const markup = flowerMarkup(box / 2, box / 2, scale, rand(0, 360));
+    return `<svg width="${box}" height="${box}" viewBox="0 0 ${box} ${box}" xmlns="http://www.w3.org/2000/svg">${markup}</svg>`;
+  }
+
+  // hace que un ramo/flor se desvanezca y se quite del DOM tras "ms" milisegundos
+  const AUTO_REMOVE_MS = 10000;
+  function scheduleRemoval(div, ms){
+    setTimeout(() => {
+      div.classList.remove('show');
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (div.parentNode) div.parentNode.removeChild(div);
+      };
+      div.addEventListener('transitionend', finish, { once: true });
+      setTimeout(finish, 1200); // red de seguridad por si no llega transitionend
+    }, ms);
+  }
+
+  // ramo plantado en UN borde de la pantalla, con el tallo hacia ese borde y las flores apuntando al centro
+  function placeEdgeBouquet(layer, delay, autoRemove){
+    const edge = pick(['bottom', 'top', 'left', 'right']);
+    const depth = Math.random();               // 0 = fondo (chico/borroso), 1 = frente (grande/nítido)
+    const size = Math.round(rand(55, 100) + depth * 55);
+    const along = rand(6, 94);
+
+    let left, top, baseRot;
+    if (edge === 'bottom'){ left = along; top = rand(96, 104); baseRot = 0; }
+    else if (edge === 'top'){ left = along; top = rand(-4, 4); baseRot = 180; }
+    else if (edge === 'left'){ left = rand(-4, 4); top = along; baseRot = 90; }
+    else { left = rand(96, 104); top = along; baseRot = -90; }
+
+    const div = document.createElement('div');
+    div.className = 'bouquet';
+    div.style.setProperty('--rot', (baseRot + rand(-14, 14)).toFixed(1) + 'deg');
+    div.style.setProperty('--blur', ((1 - depth) * 2.2).toFixed(2) + 'px');
+    div.style.setProperty('--bright', (0.75 + depth * 0.4).toFixed(2));
+    div.style.setProperty('--op', (0.55 + depth * 0.45).toFixed(2));
+    div.style.left = left + '%';
+    div.style.top = top + '%';
+    div.innerHTML = bouquetSVG(size, Math.round(size * 1.5));
+    layer.appendChild(div);
+
+    setTimeout(() => div.classList.add('show'), delay);
+    if (autoRemove) scheduleRemoval(div, delay + AUTO_REMOVE_MS);
+  }
+
+  function spawnBouquets(){
+    const layer = document.getElementById('bouquets-layer');
+    layer.innerHTML = '';
+
+    // plantados en los 4 bordes de la pantalla (no solo abajo), apareciendo de a poco, no todos de golpe
+    // estos quedan fijos (no se autoeliminan)
+    const count = Math.floor(rand(18, 24));
+    for (let i = 0; i < count; i++){
+      placeEdgeBouquet(layer, 150 + i * rand(80, 150), false);
+    }
+  }
+
+  // suma más ramos con tallo en los bordes, en puntos al azar (para el botón "Más flores")
+  // estos son temporales: se desvanecen solos a los 10s, sin tocar los que ya había
+  function addEdgeBouquets(n){
+    const layer = document.getElementById('bouquets-layer');
+    for (let i = 0; i < n; i++){
+      placeEdgeBouquet(layer, 20 + i * rand(60, 120), true);
+    }
+  }
+
+  // flores sueltas (sin tallo) solo en el medio de la pantalla, lejos de los bordes (para "Más flores")
+  // también temporales: se desvanecen a los 10s sin eliminar nada de lo que ya estaba
+  function addBouquets(n){
+    const layer = document.getElementById('bouquets-layer');
+    for (let i = 0; i < n; i++){
+      let size = rand(34, 68);
+      if (Math.random() < 0.3) size *= rand(1.3, 1.9); // algunas bastante más grandes
+      const depth = Math.random();
+      const left = rand(18, 82);
+      const top = rand(14, 82);
+      const delay = 20 + i * rand(35, 70);
+
+      const div = document.createElement('div');
+      div.className = 'bouquet lone-flower';
+      div.style.setProperty('--rot', rand(-20, 20).toFixed(1) + 'deg');
+      div.style.setProperty('--blur', ((1 - depth) * 1.6).toFixed(2) + 'px');
+      div.style.setProperty('--bright', (0.8 + depth * 0.35).toFixed(2));
+      div.style.setProperty('--op', (0.7 + depth * 0.3).toFixed(2));
+      div.style.left = left + '%';
+      div.style.top = top + '%';
+      div.innerHTML = singleFlowerSVG(size);
+      layer.appendChild(div);
+
+      setTimeout(() => div.classList.add('show'), delay);
+      scheduleRemoval(div, delay + AUTO_REMOVE_MS);
+    }
+  }
+
+  /* ---------------- Falling petals (revoloteo orgánico, no caída recta) ---------------- */
+  let petalInterval = null;
+
+  function fallingPetalSVG(size, color){
+    // pétalo suelto: gota asimétrica con una leve curvatura/nervadura, como uno real desprendido
+    const w = size * rand(0.55, 0.75);
+    const bend = rand(-3, 3);
+    return `<svg width="${size}" height="${size}" viewBox="-${size/2} -${size/2} ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,${-size*0.42}
+        C ${w*0.9+bend},${-size*0.2} ${w*0.75},${size*0.28} 0,${size*0.42}
+        C ${-w*0.75},${size*0.28} ${-w*0.9+bend},${-size*0.2} 0,${-size*0.42} Z"
+        fill="${color}"/>
+      <path d="M0,${-size*0.36} Q${bend*0.5},0 0,${size*0.36}" stroke="rgba(120,80,0,0.35)" stroke-width="0.8" fill="none"/>
+    </svg>`;
+  }
+
+  function createPetal(){
+    const layer = document.getElementById('petals-layer');
+    const petal = document.createElement('div');
+    petal.className = 'petal';
+
+    const size = 13 + Math.random() * 15;
+    const color = pick(PETAL_SHADES);
+    petal.innerHTML = fallingPetalSVG(size, color);
+
+    const startX = Math.random() * 100;
+    const duration = 5.5 + Math.random() * 4.5;
+    const delay = Math.random() * 0.6;
+
+    petal.style.left = startX + 'vw';
+    layer.appendChild(petal);
+
+    // trayectoria en varios tramos: oscila de lado a lado y alterna el giro,
+    // simulando el aleteo/revoloteo de un pétalo real cayendo (no una línea recta)
+    const steps = 6 + Math.floor(rand(0, 3));
+    const keyframes = [];
+    let rot = rand(0, 360);
+    let x = 0;
+    for (let i = 0; i <= steps; i++){
+      const progress = i / steps;
+      x += rand(-70, 70) * (i === 0 ? 0.3 : 1);
+      rot += rand(-140, 140);
+      const wobble = Math.sin(progress * Math.PI * rand(2, 4)) * rand(0.85, 1.15);
+      keyframes.push({
+        transform: `translate(${x.toFixed(1)}px, ${(progress * 118 - 8).toFixed(1)}vh) rotate(${rot.toFixed(0)}deg) scale(${(0.9 + wobble*0.15).toFixed(2)}, ${(1 - Math.abs(wobble)*0.25).toFixed(2)})`,
+        opacity: progress < 0.05 ? 0 : (progress > 0.92 ? 0.7 : 0.95),
+        offset: progress
+      });
+    }
+
+    const anim = petal.animate(keyframes, {
+      duration: duration * 1000,
+      delay: delay * 1000,
+      easing: 'ease-in-out'
+    });
+
+    anim.onfinish = () => petal.remove();
+  }
+
+  function petalBurst(n){
+    for (let i = 0; i < n; i++){
+      setTimeout(createPetal, i * 45);
+    }
+  }
+
+  function startPetalRain(){
+    if (petalInterval) return;
+    petalBurst(40); // ráfaga inicial más densa
+    // lluvia continua: dos pétalos por tick para que no se vea rala
+    petalInterval = setInterval(() => { createPetal(); createPetal(); }, 220);
+  }
+
+  /* ---------------- Botón "Más flores": aparece al azar, suma flores + lluvia, y se mueve ---------------- */
+  const moreBtn = document.getElementById('moreFlowersBtn');
+
+  function moveMoreButtonRandom(){
+    const margin = 12;      // % mínimo de borde
+    const topMax = window.innerWidth < 480 ? 42 : 58; // se queda en la mitad superior para no tapar los ramos
+    let left, top;
+    for (let tries = 0; tries < 5; tries++){
+      left = rand(margin, 100 - margin);
+      top = rand(10, topMax);
+      // evita el centro exacto donde está el mensaje final
+      if (Math.abs(left - 50) > 16 || Math.abs(top - 42) > 14) break;
+    }
+    moreBtn.style.left = left + '%';
+    moreBtn.style.top = top + '%';
+  }
+
+  function showMoreFlowersButton(){
+    moveMoreButtonRandom();
+    moreBtn.classList.add('show');
+  }
+
+  moreBtn.addEventListener('click', function(){
+    addBouquets(Math.floor(rand(10, 18)));
+    addEdgeBouquets(Math.floor(rand(3, 7)));
+    petalBurst(Math.floor(rand(25, 45)));
+    moveMoreButtonRandom();
+  });
+
+})();
+</script>
+</body>
+</html>
