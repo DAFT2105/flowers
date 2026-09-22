@@ -257,7 +257,7 @@
   </div>
 
   <div class="final-message" id="finalMessage">
-    <h1>Feliz Día de las Flores Amarillas 💛</h1>
+    <h1>Feliz Día<br>de las<br>Flores Amarillas 💛</h1>
   </div>
 
   <button class="more-btn" id="moreFlowersBtn" type="button">🌼 Más flores</button>
@@ -270,8 +270,8 @@
   /* ============================================================
      Puedes personalizar el mensaje final editando estas líneas:
   ============================================================ */
-  const MENSAJE_TITULO = "Feliz Día de las Flores Amarillas 💛";
-  document.querySelector('#finalMessage h1').textContent = MENSAJE_TITULO;
+  const MENSAJE_TITULO = "Feliz Día<br>de las<br>Flores Amarillas 💛";
+  document.querySelector('#finalMessage h1').innerHTML = MENSAJE_TITULO;
 
   function rand(min, max){ return min + Math.random() * (max - min); }
   function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
@@ -812,7 +812,7 @@
   let lastAddAt = 0;
   moreBtn.addEventListener('click', function(){
     const now = Date.now();
-    if (now - lastAddAt < 1000) return;
+    if (now - lastAddAt < 1500) return;
     lastAddAt = now;
 
     addBouquets(Math.floor(rand(8, 14)));
